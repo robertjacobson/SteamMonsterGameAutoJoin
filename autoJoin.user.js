@@ -1,12 +1,11 @@
 // ==UserScript==
-// @name         My Fancy New Userscript
-// @namespace    http://your.homepage/
+// @name         Steam AutoJoin
+// @namespace    https://github.com/waterfoul/SteamMonsterGameAutoJoin
 // @version      0.1
-// @description  enter something useful
-// @author       You
+// @description  Autojoins into a game based on ulletical's steam chat
+// @author       waterfoul
 // @match        http://steamcommunity.com/minigame/
 // @match        http://www.twitch.tv/ulletical/chat
-// @match        http://www.twitch.tv/waterfoul/chat
 // @grant        GM_addValueChangeListener
 // @grant        GM_setValue
 // @grant        GM_xmlhttpRequest
@@ -14,7 +13,7 @@
 
 if(window.location.href == "http://steamcommunity.com/minigame/") {
     var validGame = false;
-    var steamId = false;
+    var steamIds = [];
     var wait = true;
     function checkGame(){
         GM_xmlhttpRequest({
@@ -27,22 +26,25 @@ if(window.location.href == "http://steamcommunity.com/minigame/") {
             }
         });
     }
-    function joinLoop() {
-        if(steamId !== false && !validGame)
-        {
-            wait = false;
-            JoinGame(steamId);
+    setInterval(function() {
+        var checkGameLoop = false;
+        if(!validGame)
+            steamIds.forEach(function(runCount, steamId){
+                if(runCount < 100) {
+                    JoinGame(steamId);
+                    checkGameLoop = true;
+                }
+                steamIds[steamId]++;
+            });
+        if(checkGameLoop) {
             checkGame();
         }
         // Reset the valid count from reset to 2 hrs later
         var now = new Date();
         if(now.getUTCHours() >= 14 && now.getUTCHours() <= 16) {
-            wait = false;
             validGame = false;
         }
-        setTimeout(joinLoop, 1000);
-    }
-    joinLoop();
+    }, 5000);
     GM_addValueChangeListener("Steam Auto Join", function(name, old_value, new_value, from_remote) {
         console.log('Recieved ' + new_value.id);
         steamId = new_value.id;
@@ -56,14 +58,20 @@ if(window.location.href == "http://steamcommunity.com/minigame/") {
         {
             mutations.forEach(function(mutation) {
                 if(mutation.target.className == 'chat-lines') {
-                    var chatText = mutation.target.innerText.split('\n');
-                    chatText = chatText[chatText.length - 2];
-                    var joinIdx = chatText.toLowerCase().indexOf("joingame");
-                    if(joinIdx != -1)
+                    var lis = mutation.target.getElementsByTagName("li");
+                    var lastLi = lis[lis.length - 1];
+                    //Make sure we only listen to moderators
+                    if(lastLi.getElementsByClassName('moderator').length > 0)
                     {
-                        lParen = chatText.indexOf("(", joinIdx);
-                        rParen = chatText.indexOf(")", lParen);
-                        GM_setValue("Steam Auto Join", { id: chatText.substring(lParen + 1, rParen) });
+                        var chatText = lastLi.innerText;
+                        console.log(chatText);
+                        var joinIdx = chatText.toLowerCase().indexOf("joingame");
+                        if(joinIdx != -1)
+                        {
+                            lParen = chatText.indexOf("(", joinIdx);
+                            rParen = chatText.indexOf(")", lParen);
+                            GM_setValue("Steam Auto Join", { id: chatText.substring(lParen + 1, rParen) });
+                        }
                     }
                 }
             });
