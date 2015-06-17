@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         Steam AutoJoin
 // @namespace    https://github.com/waterfoul/SteamMonsterGameAutoJoin
-// @version      0.1
+// @version      0.2
 // @description  Autojoins into a game based on ulletical's steam chat
 // @author       waterfoul
 // @match        http://steamcommunity.com/minigame/
 // @match        http://www.twitch.tv/ulletical/chat
+// @match        http://www.twitch.tv/waterfoul/chat
 // @grant        GM_addValueChangeListener
 // @grant        GM_setValue
 // @grant        GM_xmlhttpRequest
@@ -14,7 +15,6 @@
 if(window.location.href == "http://steamcommunity.com/minigame/") {
     var validGame = false;
     var steamIds = [];
-    var wait = true;
     function checkGame(){
         GM_xmlhttpRequest({
             method: "GET",
@@ -28,6 +28,7 @@ if(window.location.href == "http://steamcommunity.com/minigame/") {
     }
     setInterval(function() {
         var checkGameLoop = false;
+        console.log(validGame, steamIds);
         if(!validGame)
             steamIds.forEach(function(runCount, steamId){
                 if(runCount < 100) {
@@ -44,14 +45,12 @@ if(window.location.href == "http://steamcommunity.com/minigame/") {
         if(now.getUTCHours() >= 14 && now.getUTCHours() <= 16) {
             validGame = false;
         }
-    }, 5000);
+    }, 2000);
     GM_addValueChangeListener("Steam Auto Join", function(name, old_value, new_value, from_remote) {
         console.log('Recieved ' + new_value.id);
-        steamId = new_value.id;
+        steamIds[new_value.id] = 0;
     });
 } else {
-    GM_setValue("Steam Auto Join", { what_ever_needs: 'to_be_synced_to_all_script_instances' });
-    
     function loadObserver() {
         var validGame = false;
         var observer = new MutationObserver(function(mutations)
@@ -60,17 +59,15 @@ if(window.location.href == "http://steamcommunity.com/minigame/") {
                 if(mutation.target.className == 'chat-lines') {
                     var lis = mutation.target.getElementsByTagName("li");
                     var lastLi = lis[lis.length - 1];
-                    //Make sure we only listen to moderators
-                    if(lastLi.getElementsByClassName('moderator').length > 0)
+                    var chatText = lastLi.innerText;
+                    if(lastLi.getElementsByClassName('moderator').length > 0 && !chatText.match('Nightbot:'))
                     {
-                        var chatText = lastLi.innerText;
                         console.log(chatText);
-                        var joinIdx = chatText.toLowerCase().indexOf("joingame");
-                        if(joinIdx != -1)
+                        matches = chatText.match(/\b[0-9][0-9][0-9][0-9][0-9]\b/);
+                        console.log(matches);
+                        if(matches !== null)
                         {
-                            lParen = chatText.indexOf("(", joinIdx);
-                            rParen = chatText.indexOf(")", lParen);
-                            GM_setValue("Steam Auto Join", { id: chatText.substring(lParen + 1, rParen) });
+                            GM_setValue("Steam Auto Join", { id: matches[0] });
                         }
                     }
                 }
