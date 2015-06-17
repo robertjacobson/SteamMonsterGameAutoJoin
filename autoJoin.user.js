@@ -45,7 +45,7 @@ if(window.location.href == "http://steamcommunity.com/minigame/") {
         if(now.getUTCHours() >= 14 && now.getUTCHours() <= 16) {
             validGame = false;
         }
-    }, 2000);
+    }, 1000);
     GM_addValueChangeListener("Steam Auto Join", function(name, old_value, new_value, from_remote) {
         console.log('Recieved ' + new_value.id);
         steamIds[new_value.id] = 0;
